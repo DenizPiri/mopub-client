@@ -245,7 +245,10 @@ public class MoPubView extends FrameLayout {
         if (mAdapter != null) mAdapter.invalidate();
 
         String type = paramsHash.get("X-Adtype");
-        mAdapter = BaseAdapter.getAdapterForType(type);
+        if (type.equals("custom"))
+			type = paramsHash.get("X-Customselector");
+		Log.i("MoPub", "X-Adtype received: " + type);
+		mAdapter = BaseAdapter.getAdapterForType(type);
 
         if (mAdapter != null) {
             Log.i("MoPub", "Loading native adapter for type: " + type);

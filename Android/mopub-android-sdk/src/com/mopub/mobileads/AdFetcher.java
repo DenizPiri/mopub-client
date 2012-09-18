@@ -60,6 +60,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 /*
  * AdFetcher is a delegate of an AdView that handles loading ad data over a
  * network connection. The ad is fetched in a background thread by executing
@@ -225,25 +227,50 @@ public class AdFetcher {
                 return null;
             }
 
-            if (atHeader.getValue().equals("custom")) {
+            // Handle custom event ad type.
+               // ONLY IF THE CUSTOM SELECTOR NAME STARTS WITH "activity_"
+			if (atHeader.getValue().equals("custom") && response.getFirstHeader("X-Customselector").getValue().startsWith("activity_")) {
                 // Handle custom native ad type.
                 Log.i("MoPub", "Performing custom event.");
                 Header cmHeader = response.getFirstHeader("X-Customselector");
                 return new PerformCustomEventTaskResult(mAdView, cmHeader);
                 
-            } else if (atHeader.getValue().equals("mraid")) {
+            } else if (atHeader.getValue().equals("mraid") || atHeader.getValue().equals("custom")) {
                 // Handle mraid ad type.
-                Log.i("MoPub", "Loading mraid ad");
-                HashMap<String, String> paramsHash = new HashMap<String, String>();
-                paramsHash.put("X-Adtype", atHeader.getValue());
+                Log.i("MoPub", "Loading mraid/custom ad");
 
-                String data = httpEntityToString(entity);
-                paramsHash.put("X-Nativeparams", data);
-                return new LoadNativeAdTaskResult(mAdView, paramsHash);
-                
+                HashMap<String, String> paramsHash = new HashMap<String, String>();
+				paramsHash.put("X-Adtype", atHeader.getValue());
+
+				InputStream is = entity.getContent();
+				StringBuffer out = new StringBuffer();
+				byte[] b = new byte[4096];
+				for (int n; (n = is.read(b)) != -1;) {
+					out.append(new String(b, 0, n));
+				}
+				paramsHash.put("X-Nativeparams", out.toString());
+				if (response.getFirstHeader("X-Customselector") != null)
+				{
+					String full_selector = response.getFirstHeader("X-Customselector").getValue();
+					
+					JSONObject obj = new JSONObject();
+					String[] params;
+					if (full_selector.indexOf(':') != -1)
+					{
+						paramsHash.put("X-Customselector", full_selector.substring(0, full_selector.indexOf(':')));
+						params = full_selector.substring(full_selector.indexOf(':')+1).split("[|]+");
+						for(String item : params)
+							obj.put(item.split("=", 2)[0], item.split("=", 2)[1]);
+					}
+					else
+						paramsHash.put("X-Customselector", full_selector);
+
+					paramsHash.put("X-Nativeparams", obj.toString());
+				}
+				return new LoadNativeAdTaskResult(mAdView, paramsHash);
             } else if (!atHeader.getValue().equals("html")) {
                 // Handle native SDK ad type.
-                Log.i("MoPub", "Loading native ad");
+                Log.i("MoPub", "Loading native ad - html");
 
                 HashMap<String, String> paramsHash = new HashMap<String, String>();
                 paramsHash.put("X-Adtype", atHeader.getValue());
@@ -262,6 +289,7 @@ public class AdFetcher {
                 return new LoadNativeAdTaskResult(mAdView, paramsHash);
             }
 
+			Log.i("MoPub", "Loading native ad - html 2");
             // Handle HTML ad.
             String data = httpEntityToString(entity);
             return new LoadHtmlAdTaskResult(mAdView, data);

@@ -72,6 +72,8 @@ public class MoPubConversionTracker {
 
     Runnable mTrackOpen = new Runnable() {
         public void run() {
+			try
+			{
             StringBuilder sz = new StringBuilder("http://"+TRACK_HOST+TRACK_HANDLER);
             sz.append("?v=6&id=" + mPackageName);
             
@@ -115,6 +117,11 @@ public class MoPubConversionTracker {
             SharedPreferences.Editor editor
             = mContext.getSharedPreferences("mopubSettings", 0).edit();
             editor.putBoolean(mPackageName+" tracked", true).commit();
+			}
+			catch(Exception exc)
+			{
+				Log.e("mopub-conversion-tracker-thread-exc", exc.toString());
+			}
         }
     };
 }

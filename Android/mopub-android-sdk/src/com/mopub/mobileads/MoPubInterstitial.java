@@ -269,9 +269,9 @@ public class MoPubInterstitial implements OnAdLoadedListener, OnAdFailedListener
                 interstitial.getInterstitialAdapterListener();
             String type = paramsHash.get("X-Adtype");
             
-            if (type != null && (type.equals("interstitial") || type.equals("mraid"))) {
+            if (type != null && (type.equals("interstitial") || type.equals("custom") || type.equals("mraid"))) {
                 String interstitialType = type.equals("interstitial") ? 
-                        paramsHash.get("X-Fulladtype") : "mraid";
+                        paramsHash.get("X-Fulladtype") : (type.equals("custom") ? paramsHash.get("X-Customselector") : "mraid");
                 
                 Log.i("MoPub", "Loading native adapter for interstitial type: " + interstitialType);
                 mInterstitialAdapter =
